@@ -1,0 +1,11 @@
+# PARAMETERS FOR MOTION TASK SERVER
+# name of action server to send requests to
+action_server_name: 'motion_task_server'
+# node update rate, in Hz
+update_rate: 20
+# whether or not to use safety bond node
+safety_enabled: True 
+# startup timeout, in seconds
+startup_timeout: 20
+# force a task to cancel when requested
+force_cancel: false

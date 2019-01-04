@@ -1,0 +1,8 @@
+Header header
+string action_type
+bool preempt
+---
+# result
+bool success
+---
+bool result
