@@ -11,7 +11,7 @@ To use this package, you need to define a Python package called `task_config` wi
 - A file called `task_config` where you define a `CommandHandler` and `SafetyResponder`class. 
     - `SafetyResponder` is used if Safety is enabled and the system goes into a safety response state. 
 - These classes need to implement the interface laid out [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_server/abstract_command_handler.py) and [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_server/abstract_safety_responder.py)
-- Implement each of your tasks that implements the `AbstractTask` defined [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_servers/abstract_task.py)
+- Implement each of your tasks that implements the `AbstractTask` defined [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_server/abstract_task.py)
 
 
 ## Notes on the usage of this package: ##
