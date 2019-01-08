@@ -4,9 +4,8 @@ import rospy
 import traceback
 import threading
 
-from enum import Enum
-
 from task_action_server import TaskActionServer
+from motions_server.abstract_command_handler import TaskHandledState
 
 from task_config.task_config import CommandHandler, SafetyResponder
 
@@ -14,14 +13,7 @@ from iarc7_safety.SafetyClient import SafetyClient
 from iarc7_safety.iarc_safety_exception import IARCFatalSafetyException
 
 
-class TaskHandledState(Enum):
-    OKAY = 1     # task is running and is okay
-    FAILED = 2   # task failed
-    ABORTED = 3  # task needs aborted
-    DONE = 4     # task finished cleanly
-
-
-class MotionTaskServer(object):
+class TaskManager(object):
 
     def __init__(self, action_server):
         self._action_server = action_server
@@ -35,7 +27,7 @@ class MotionTaskServer(object):
         self._safety_responder = SafetyResponder()
 
         # safety client, used if Safety Enabled
-        self._safety_client = SafetyClient('motion_task_server')
+        self._safety_client = SafetyClient('task_manager')
 
         try:
             # load params
@@ -44,7 +36,7 @@ class MotionTaskServer(object):
             self._timeout = rospy.Duration(rospy.get_param('~startup_timeout'))
             self._force_cancel = rospy.get_param('~force_cancel')
         except KeyError:
-            rospy.logfatal('MotionTaskServer: Error getting params')
+            rospy.logfatal('TaskManager: Error getting params')
             raise
 
     def run(self):
@@ -61,16 +53,16 @@ class MotionTaskServer(object):
 
         # forming bond with safety client, if enabled
         if self._safety_enabled and not self._safety_client.form_bond():
-            raise IARCFatalSafetyException('MotionTaskServer: could not form bond with safety client')
+            raise IARCFatalSafetyException('TaskManager: could not form bond with safety client')
 
         while not rospy.is_shutdown():
             # main loop
             with self._lock:
                 if self._safety_enabled and self._safety_client.is_fatal_active():
-                    raise IARCFatalSafetyException('MotionTaskServer: Safety Fatal')
+                    raise IARCFatalSafetyException('TaskManager: Safety Fatal')
 
                 if self._safety_enabled and self._safety_client.is_safety_active():
-                    rospy.logerr('MotionTaskServer: Activating safety response')
+                    rospy.logerr('TaskManager: Activating safety response')
                     self._safety_responder.activate_safety_response()
                     return
 
@@ -79,15 +71,15 @@ class MotionTaskServer(object):
                     try:
                         request = self._action_server.get_new_task()
                         # use provided handler to check that request is valid
-                        success, new_task = self._handler.check_request(request)
-                        if success:
+                        new_task = self._handler.check_request(request)
+                        if new_task is not None:
                             self._task = new_task
                             self._action_server.set_accepted()
                         else:
-                            rospy.logerr('MotionTaskServer: new task is invalid')
+                            rospy.logerr('TaskManager: new task is invalid')
                             self._action_server.set_rejected()
                     except Exception as e:
-                        rospy.logfatal('MotionTaskServer: Exception getting new task')
+                        rospy.logfatal('TaskManager: Exception getting new task')
                         raise
 
                 if self._task is not None and self._action_server.task_canceled():
@@ -95,16 +87,16 @@ class MotionTaskServer(object):
                     try:
                         success = self._task.cancel()
                         if not success:
-                            rospy.logwarn('MotionTaskServer: task refusing to cancel')
+                            rospy.logwarn('TaskManager: task refusing to cancel')
                             if self._force_cancel:
-                                rospy.logwarn('MotionTaskServer: forcing task cancel')
+                                rospy.logwarn('TaskManager: forcing task cancel')
                                 self._action_server.set_canceled()
                                 self._task = None
                         elif success:
                             self._action_server.set_canceled()
                             self._task = None
                     except Exception as e:
-                        rospy.logfatal('MotionTaskServer: Error canceling task')
+                        rospy.logfatal('TaskManager: Error canceling task')
                         raise
 
                 if self._task is not None:
@@ -112,7 +104,7 @@ class MotionTaskServer(object):
                     try:
                         state, command = self._task.get_desired_command()
                     except Exception as e:
-                        rospy.logerr('MotionTaskServer: Error getting command from task. Aborting task')
+                        rospy.logerr('TaskManager: Error getting command from task. Aborting task')
                         rospy.logerr(str(e))
                         self._action_server.set_aborted()
                         self._task = None
@@ -122,26 +114,26 @@ class MotionTaskServer(object):
                     except Exception as e:
                         # this is a fatal error, as the handler should be able to
                         # handle commands of valid tasks without raising exceptions
-                        rospy.logfatal('MotionTaskServer: Error handling task command')
+                        rospy.logfatal('TaskManager: Error handling task command')
                         rospy.logfatal(str(e))
                         raise
 
                     if task_state == TaskHandledState.ABORTED:
-                        rospy.logerr('MotionTaskServer: aborting task')
+                        rospy.logerr('TaskManager: aborting task')
                         self._action_server.set_aborted()
                         self._task = None
                     elif task_state == TaskHandledState.DONE:
-                        rospy.logdebug('MotionTaskServer: task has completed cleanly')
+                        rospy.logdebug('TaskManager: task has completed cleanly')
                         self._action_server.set_succeeded()
                         self._task = None
                     elif task_state == TaskHandledState.FAILED:
-                        rospy.logerr('MotionTaskServer: Task failed')
+                        rospy.logerr('TaskManager: Task failed')
                         self._action_server.set_failed()
                         self._task = None
                     elif task_state == TaskHandledState.OKAY:
-                        rospy.logdebug_throttle(1, 'MotionTaskServer: task running')
+                        rospy.logdebug_throttle(1, 'TaskManager: task running')
                     else:
-                        raise IARCFatalSafetyException('MotionTaskServer: invalid task handled state provided')
+                        raise IARCFatalSafetyException('TaskManager: invalid task handled state returned from handler: ' + str(task_state))
 
             self._update_rate.sleep()
 
@@ -151,23 +143,23 @@ class MotionTaskServer(object):
             self._handler.wait_until_ready(timeout)
             self._safety_responder.wait_until_ready(timeout)
         except Exception:
-            rospy.logfatal('MotionTaskServer: Error waiting for dependencies')
+            rospy.logfatal('TaskManager: Error waiting for dependencies')
             raise
         return True
 
 
 if __name__ == '__main__':
-    rospy.init_node('task_action_server')
+    rospy.init_node('task_manager')
     server_name = rospy.get_param('~action_server_name')
     action_server = TaskActionServer(server_name)
-    task_server = MotionTaskServer(action_server)
+    task_manager = TaskManager(action_server)
 
     try:
-        task_server.run()
+        task_manager.run()
     except Exception as e:
-        rospy.logfatal('MotionTaskServer: Error while running')
+        rospy.logfatal('TaskManager: Error while running')
         rospy.logfatal(str(e))
         rospy.logfatal(traceback.format_exc())
         raise
     finally:
-        rospy.signal_shutdown('MotionTaskServer shutdown')
+        rospy.signal_shutdown('TaskManager shutdown')

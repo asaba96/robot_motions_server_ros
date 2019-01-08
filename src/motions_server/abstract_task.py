@@ -15,7 +15,6 @@ https://github.com/Pitt-RAS/iarc7_motion/blob/master/src/iarc7_motion/iarc_tasks
 
 
 class AbstractTask(object):
-
     # Abstract method
     def get_desired_command(self):
         '''
@@ -26,7 +25,6 @@ class AbstractTask(object):
         Returns:
             TaskState: instance of whatever state the task is in
             Task Command: desired command of the task
-
         '''
         raise NotImplementedError("Subclass must implement abstract method")
 
@@ -35,5 +33,7 @@ class AbstractTask(object):
         '''
         Cancels the task.
 
+        Returns:
+            canceled: if True, canceled succeeded, otherwise task still needs to run
         '''
         raise NotImplementedError("Subclass must implement abstract method")

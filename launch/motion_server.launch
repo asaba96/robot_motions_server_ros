@@ -1,0 +1,8 @@
+<launch>
+    <arg name="bond_id_namespace" default="safety_bonds" />
+    <node name="task_manager" pkg="robot_motions_server_ros" type="task_manager.py">
+        <rosparam command="load" 
+            file="$(find robot_motions_server_ros)/param/motion_server.yaml" />
+    </node>
+    <param name="$(arg bond_id_namespace)/motion_command_coordinator/form_bond" value="true" />
+</launch>

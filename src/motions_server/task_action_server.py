@@ -99,6 +99,6 @@ class TaskActionServer(object):
             self._cancel_requested = False
             self._new_request = None
 
-    def new_task_available(self):
+    def has_new_task(self):
         with self._lock:
             return (self._new_request is not None)

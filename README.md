@@ -2,22 +2,22 @@
 
 This package defines a "task" (any high-level action) server that utilizes the Actionlib to implement a node that: 
 - Accepts action requests
-- Interfaces with the user's defined Task Handler to 
-    1. Check the validity of the task and 
-    2. Construct and return a task that implements the base `AbstractTask` define here
+- Interfaces with the user's defined Task Handler that
+    1. Checks the validity of the task and 
+    2. Constructs and returns a task that implements the base `AbstractTask` 
 - Manages the life-cycle of your task, so creation, deletion, cancelation, and reporting back to the Action client failures and success. 
 
 To use this package, you need to define a Python package called `task_config` with the following: 
 - A file called `task_config` where you define a `CommandHandler` and `SafetyResponder`class. 
     - `SafetyResponder` is used if Safety is enabled and the system goes into a safety response state. 
-- These classes need to implement the interface laid out here
-- Define each of your tasks that implements the `AbstractTask` laid out here. 
+- These classes need to implement the interface laid out [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_server/abstract_command_handler.py) and [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motions_server/abstract_safety_responder.py)
+- Implement each of your tasks that implements the `AbstractTask` defined [here](https://github.com/asaba96/robot_motions_server_ros/blob/master/src/motion_servers/abstract_task.py)
 
 ## Notes on the usage of this package: ##
 
 ### Params: ###
 - Action Server Name: Name of the action server to send requests to
-- Safety Enabled - utilize the Safety Node Monitoring packages (see here)
+- Safety Enabled - utilize the Iarc7 Safety Node Monitoring packages (see [here](https://github.com/Pitt-RAS/iarc7_safety) for Iarc7 Safety)
 - Update Rate - update rate of main state logic
 - Startup Timeout - timeout on startup of node
 - Force Cancel - if a task refuses to cancel, should the MotionTaskServer force a cancel

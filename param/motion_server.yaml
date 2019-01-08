@@ -4,7 +4,7 @@ action_server_name: 'motion_task_server'
 # node update rate, in Hz
 update_rate: 20
 # whether or not to use safety bond node
-safety_enabled: True 
+safety_enabled: False 
 # startup timeout, in seconds
 startup_timeout: 20
 # force a task to cancel when requested
