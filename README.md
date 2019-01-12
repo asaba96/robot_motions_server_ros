@@ -38,3 +38,5 @@ To use this package, you need to define a Python package called `task_config` wi
     - If so, the current task goes into a `Cancel Requested` state
     - If not, the current task is allowed to continue running until it completes and then the new task takes over
     
+## Example Motion Task Config ##
+See [here](https://github.com/asaba96/robot_motions_server_ros) for an example Motion Task Config package setup.
