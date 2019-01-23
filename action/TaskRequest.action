@@ -1,6 +1,27 @@
 Header header
+
+# name of next task
 string action_type
+
+# cancel current task and accept new
 bool preempt
+
+# commonly needed fields
+geometry_msgs/PoseStamped pose
+geometry_msgs/PoseStamped[] poses
+
+geometry_msgs/TwistStamped twist
+geometry_msgs/TwistStamped[] twists
+
+geometry_msgs/AccelStamped accel
+geometry_msgs/AccelStamped[] accels
+
+bool field
+bool[] fields
+
+string id
+string[] ids
+
 ---
 # result
 bool success

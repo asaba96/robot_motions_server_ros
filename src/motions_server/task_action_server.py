@@ -23,7 +23,7 @@ class TaskActionServer(object):
 
     def _new_goal(self, goal):
         with self._lock:
-            rospy.logdebug('TaskActionServer: New goal- %s', goal.get_goal_id().id)
+            rospy.loginfo('TaskActionServer: New goal received')
             preempt = goal.get_goal().preempt
 
             if self._current_request is not None:
@@ -40,7 +40,9 @@ class TaskActionServer(object):
     def _cancel_request(self, cancel):
         with self._lock:
             rospy.logdebug('TaskActionServer: cancel requested')
-            if cancel == self._current_request:
+            # actionlib equality check does not handle None objects, so check if None
+            # this can happen if cancel comes before goal can be accepted
+            if self._current_request is not None and cancel == self._current_request:
                 self._current_request.set_cancel_requested()
                 self._cancel_requested = True
             else:
@@ -81,11 +83,11 @@ class TaskActionServer(object):
 
     def get_new_task(self):
         with self._lock:
-            return self._new_request.get_goal().action_type
+            return self._new_request.get_goal()
 
     def set_accepted(self):
         with self._lock:
-            rospy.logdebug('TaskActionServer: new goal accepted')
+            rospy.loginfo('TaskActionServer: new goal accepted')
             self._new_request.set_accepted()
             self._current_request = self._new_request
             self._cancel_requested = False

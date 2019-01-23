@@ -42,6 +42,7 @@ class TaskManager(object):
     def run(self):
         # this check is needed, as sometimes there are issues with simulated time
         while rospy.Time.now() == rospy.Time(0) and not rospy.is_shutdown():
+            rospy.logwarn('TaskManager: waiting on time')
             rospy.sleep(0.005)
 
         if rospy.is_shutdown():
@@ -123,7 +124,7 @@ class TaskManager(object):
                         self._action_server.set_aborted()
                         self._task = None
                     elif task_state == TaskHandledState.DONE:
-                        rospy.logdebug('TaskManager: task has completed cleanly')
+                        rospy.loginfo('TaskManager: task has completed cleanly')
                         self._action_server.set_succeeded()
                         self._task = None
                     elif task_state == TaskHandledState.FAILED:
@@ -131,9 +132,10 @@ class TaskManager(object):
                         self._action_server.set_failed()
                         self._task = None
                     elif task_state == TaskHandledState.OKAY:
-                        rospy.logdebug_throttle(1, 'TaskManager: task running')
+                        rospy.loginfo_throttle(1, 'TaskManager: task running')
                     else:
-                        raise IARCFatalSafetyException('TaskManager: invalid task handled state returned from handler: ' + str(task_state))
+                        raise IARCFatalSafetyException(
+                            'TaskManager: invalid task handled state returned from handler: ' + str(task_state))
 
             self._update_rate.sleep()
 
@@ -150,6 +152,9 @@ class TaskManager(object):
 
 if __name__ == '__main__':
     rospy.init_node('task_manager')
+
+    rospy.loginfo('TaskManager: Task Manager starting up')
+
     server_name = rospy.get_param('~action_server_name')
     action_server = TaskActionServer(server_name)
     task_manager = TaskManager(action_server)
