@@ -9,8 +9,12 @@ from motions_server.abstract_command_handler import TaskHandledState
 
 from task_config.task_config import CommandHandler, SafetyResponder
 
-from iarc7_safety.SafetyClient import SafetyClient
-from iarc7_safety.iarc_safety_exception import IARCFatalSafetyException
+global use_safety
+use_safety = False
+
+if use_safety:
+    from iarc7_safety.SafetyClient import SafetyClient
+    from iarc7_safety.iarc_safety_exception import IARCFatalSafetyException
 
 
 class TaskManager(object):
@@ -26,12 +30,12 @@ class TaskManager(object):
         # construct safety responder
         self._safety_responder = SafetyResponder()
 
-        # safety client, used if Safety Enabled
-        self._safety_client = SafetyClient('task_manager')
+        if use_safety:
+            # safety client, used if Safety Enabled
+            self._safety_client = SafetyClient('task_manager')
 
         try:
             # load params
-            self._safety_enabled = rospy.get_param('~safety_enabled')
             self._update_rate = rospy.Rate(rospy.get_param('~update_rate'))
             self._timeout = rospy.Duration(rospy.get_param('~startup_timeout'))
             self._force_cancel = rospy.get_param('~force_cancel')
@@ -53,16 +57,16 @@ class TaskManager(object):
             raise rospy.ROSInitException()
 
         # forming bond with safety client, if enabled
-        if self._safety_enabled and not self._safety_client.form_bond():
+        if use_safety and not self._safety_client.form_bond():
             raise IARCFatalSafetyException('TaskManager: could not form bond with safety client')
 
         while not rospy.is_shutdown():
             # main loop
             with self._lock:
-                if self._safety_enabled and self._safety_client.is_fatal_active():
+                if use_safety and self._safety_client.is_fatal_active():
                     raise IARCFatalSafetyException('TaskManager: Safety Fatal')
 
-                if self._safety_enabled and self._safety_client.is_safety_active():
+                if use_safety and self._safety_client.is_safety_active():
                     rospy.logerr('TaskManager: Activating safety response')
                     self._safety_responder.activate_safety_response()
                     return
