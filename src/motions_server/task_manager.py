@@ -14,7 +14,6 @@ use_safety = False
 
 if use_safety:
     from iarc7_safety.SafetyClient import SafetyClient
-    from iarc7_safety.iarc_safety_exception import IARCFatalSafetyException
 
 
 class TaskManager(object):
@@ -58,13 +57,13 @@ class TaskManager(object):
 
         # forming bond with safety client, if enabled
         if use_safety and not self._safety_client.form_bond():
-            raise IARCFatalSafetyException('TaskManager: could not form bond with safety client')
+            raise ROSInitException('TaskManager: could not form bond with safety client')
 
         while not rospy.is_shutdown():
             # main loop
             with self._lock:
                 if use_safety and self._safety_client.is_fatal_active():
-                    raise IARCFatalSafetyException('TaskManager: Safety Fatal')
+                    raise RuntimeError('TaskManager: Safety Fatal')
 
                 if use_safety and self._safety_client.is_safety_active():
                     rospy.logerr('TaskManager: Activating safety response')
@@ -138,7 +137,7 @@ class TaskManager(object):
                     elif task_state == TaskHandledState.OKAY:
                         rospy.loginfo_throttle(1, 'TaskManager: task running')
                     else:
-                        raise IARCFatalSafetyException(
+                        raise ValueError(
                             'TaskManager: invalid task handled state returned from handler: ' + str(task_state))
 
             self._update_rate.sleep()
