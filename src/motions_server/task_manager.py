@@ -17,7 +17,6 @@ if use_safety:
 
 
 class TaskManager(object):
-
     def __init__(self, action_server):
         self._action_server = action_server
         self._lock = threading.RLock()
@@ -31,21 +30,21 @@ class TaskManager(object):
 
         if use_safety:
             # safety client, used if Safety Enabled
-            self._safety_client = SafetyClient('task_manager')
+            self._safety_client = SafetyClient("task_manager")
 
         try:
             # load params
-            self._update_rate = rospy.Rate(rospy.get_param('~update_rate'))
-            self._timeout = rospy.Duration(rospy.get_param('~startup_timeout'))
-            self._force_cancel = rospy.get_param('~force_cancel')
+            self._update_rate = rospy.Rate(rospy.get_param("~update_rate"))
+            self._timeout = rospy.Duration(rospy.get_param("~startup_timeout"))
+            self._force_cancel = rospy.get_param("~force_cancel")
         except KeyError:
-            rospy.logfatal('TaskManager: Error getting params')
+            rospy.logfatal("TaskManager: Error getting params")
             raise
 
     def run(self):
         # this check is needed, as sometimes there are issues with simulated time
         while rospy.Time.now() == rospy.Time(0) and not rospy.is_shutdown():
-            rospy.logwarn('TaskManager: waiting on time')
+            rospy.logwarn("TaskManager: waiting on time")
             rospy.sleep(0.005)
 
         if rospy.is_shutdown():
@@ -57,16 +56,18 @@ class TaskManager(object):
 
         # forming bond with safety client, if enabled
         if use_safety and not self._safety_client.form_bond():
-            raise ROSInitException('TaskManager: could not form bond with safety client')
+            raise ROSInitException(
+                "TaskManager: could not form bond with safety client"
+            )
 
         while not rospy.is_shutdown():
             # main loop
             with self._lock:
                 if use_safety and self._safety_client.is_fatal_active():
-                    raise RuntimeError('TaskManager: Safety Fatal')
+                    raise RuntimeError("TaskManager: Safety Fatal")
 
                 if use_safety and self._safety_client.is_safety_active():
-                    rospy.logerr('TaskManager: Activating safety response')
+                    rospy.logerr("TaskManager: Activating safety response")
                     self._safety_responder.activate_safety_response()
                     return
 
@@ -80,27 +81,36 @@ class TaskManager(object):
                             self._task = new_task
                             self._action_server.set_accepted()
                         else:
-                            rospy.logerr('TaskManager: new task is invalid')
+                            rospy.logerr("TaskManager: new task is invalid")
                             self._action_server.set_rejected()
                     except Exception as e:
-                        rospy.logfatal('TaskManager: Exception getting new task')
+                        rospy.logfatal(
+                            "TaskManager: Exception getting new task"
+                        )
                         raise
 
-                if self._task is not None and self._action_server.task_canceled():
+                if (
+                    self._task is not None
+                    and self._action_server.task_canceled()
+                ):
                     # there is a task running, but it is canceled
                     try:
                         success = self._task.cancel()
                         if not success:
-                            rospy.logwarn('TaskManager: task refusing to cancel')
+                            rospy.logwarn(
+                                "TaskManager: task refusing to cancel"
+                            )
                             if self._force_cancel:
-                                rospy.logwarn('TaskManager: forcing task cancel')
+                                rospy.logwarn(
+                                    "TaskManager: forcing task cancel"
+                                )
                                 self._action_server.set_canceled()
                                 self._task = None
                         elif success:
                             self._action_server.set_canceled()
                             self._task = None
                     except Exception as e:
-                        rospy.logfatal('TaskManager: Error canceling task')
+                        rospy.logfatal("TaskManager: Error canceling task")
                         raise
 
                 if self._task is not None:
@@ -108,7 +118,9 @@ class TaskManager(object):
                     try:
                         state, command = self._task.get_desired_command()
                     except Exception as e:
-                        rospy.logerr('TaskManager: Error getting command from task. Aborting task')
+                        rospy.logerr(
+                            "TaskManager: Error getting command from task. Aborting task"
+                        )
                         rospy.logerr(str(e))
                         self._action_server.set_aborted()
                         self._task = None
@@ -118,27 +130,31 @@ class TaskManager(object):
                     except Exception as e:
                         # this is a fatal error, as the handler should be able to
                         # handle commands of valid tasks without raising exceptions
-                        rospy.logfatal('TaskManager: Error handling task command')
+                        rospy.logfatal(
+                            "TaskManager: Error handling task command"
+                        )
                         rospy.logfatal(str(e))
                         raise
 
                     if task_state == TaskHandledState.ABORTED:
-                        rospy.logerr('TaskManager: aborting task')
+                        rospy.logerr("TaskManager: aborting task")
                         self._action_server.set_aborted()
                         self._task = None
                     elif task_state == TaskHandledState.DONE:
-                        rospy.loginfo('TaskManager: task has completed cleanly')
+                        rospy.loginfo("TaskManager: task has completed cleanly")
                         self._action_server.set_succeeded()
                         self._task = None
                     elif task_state == TaskHandledState.FAILED:
-                        rospy.logerr('TaskManager: Task failed')
+                        rospy.logerr("TaskManager: Task failed")
                         self._action_server.set_failed()
                         self._task = None
                     elif task_state == TaskHandledState.OKAY:
-                        rospy.loginfo_throttle(1, 'TaskManager: task running')
+                        rospy.loginfo_throttle(1, "TaskManager: task running")
                     else:
                         raise ValueError(
-                            'TaskManager: invalid task handled state returned from handler: ' + str(task_state))
+                            "TaskManager: invalid task handled state returned from handler: "
+                            + str(task_state)
+                        )
 
             self._update_rate.sleep()
 
@@ -148,26 +164,26 @@ class TaskManager(object):
             self._handler.wait_until_ready(timeout)
             self._safety_responder.wait_until_ready(timeout)
         except Exception:
-            rospy.logfatal('TaskManager: Error waiting for dependencies')
+            rospy.logfatal("TaskManager: Error waiting for dependencies")
             raise
         return True
 
 
-if __name__ == '__main__':
-    rospy.init_node('task_manager')
+if __name__ == "__main__":
+    rospy.init_node("task_manager")
 
-    rospy.loginfo('TaskManager: Task Manager starting up')
+    rospy.loginfo("TaskManager: Task Manager starting up")
 
-    server_name = rospy.get_param('~action_server_name')
+    server_name = rospy.get_param("~action_server_name")
     action_server = TaskActionServer(server_name)
     task_manager = TaskManager(action_server)
 
     try:
         task_manager.run()
     except Exception as e:
-        rospy.logfatal('TaskManager: Error while running')
+        rospy.logfatal("TaskManager: Error while running")
         rospy.logfatal(str(e))
         rospy.logfatal(traceback.format_exc())
         raise
     finally:
-        rospy.signal_shutdown('TaskManager shutdown')
+        rospy.signal_shutdown("TaskManager shutdown")
