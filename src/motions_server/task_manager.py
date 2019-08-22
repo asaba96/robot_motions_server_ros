@@ -115,6 +115,8 @@ class TaskManager(object):
 
                 if self._task is not None:
                     # can get next command and task state
+                    task_state = None
+
                     try:
                         state, command = self._task.get_desired_command()
                     except Exception as e:
@@ -122,11 +124,11 @@ class TaskManager(object):
                             "TaskManager: Error getting command from task. Aborting task"
                         )
                         rospy.logerr(str(e))
-                        self._action_server.set_aborted()
-                        self._task = None
+                        task_state = TaskHandledState.ABORTED
 
                     try:
-                        task_state = self._handler.handle(command, state)
+                        if task_state is None:
+                            task_state = self._handler.handle(command, state)
                     except Exception as e:
                         # this is a fatal error, as the handler should be able to
                         # handle commands of valid tasks without raising exceptions
